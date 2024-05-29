@@ -7,6 +7,7 @@ extern fn add(a: i32, b: i32) i32;
 extern fn mul(a: i32, b: i32) i32;
 
 pub fn main() !void {
+    // Check that external `add` works fine.
     const a_term: i32 = 2;
     const the_term: i32 = 2;
     const sum = add(a_term, the_term);
@@ -15,6 +16,7 @@ pub fn main() !void {
         .{ a_term, the_term, sum },
     );
 
+    // Check that external `mul` works fine.
     const a_factor: i32 = 2;
     const the_factor: i32 = 2;
     const product = mul(a_factor, the_factor);

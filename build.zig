@@ -1,7 +1,7 @@
 const std = @import("std");
 
-/// Build script builds an application.
 pub fn build(b: *std.Build) !void {
+    // Set the default options for the target and optimizations.
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
@@ -15,6 +15,7 @@ pub fn build(b: *std.Build) !void {
     });
     b.installArtifact(slib);
 
+    // Add and instal dynamic library atricfact.
     const dlib = b.addSharedLibrary(.{
         .name = "dzlib",
         .root_source_file = b.path("src/zig/shared.zig"),
@@ -70,6 +71,7 @@ pub fn build(b: *std.Build) !void {
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
     const test_step = b.step("test", "Run unit tests");
+    // Create an array of unit tests to loop over them.
     const run_unit_tests = [_]*std.Build.Step.Run{
         run_slib_unit_tests,
         run_dlib_unit_tests,
