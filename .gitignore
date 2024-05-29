@@ -1,0 +1,7 @@
+.git
+
+bin
+zig-cache
+zig-out
+
+hello.zig
