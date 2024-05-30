@@ -25,11 +25,15 @@ In order to see the output of the build script, you will need to run the
 following command (assuming you are in the working directrory with the project
 and have Zig installed on your machine):
 ```bash
-zig build buildz buildc
+zig build
 ```
 
-You can additionally pass `run` or `test` to run the produced binaries or to
-run the unit tests correspondingly.
+You can additionally pass `buildz`, `buildc`, `test` or all of them at once 
+to run the corresponding steps described in the build script. For example, 
+to run the executable produced by Zig source code run the line below:
+```bash
+zig build buildz
+```
 
 Reed the comments in the source code files in order to learn more on how this 
 amazing build system actually works!
