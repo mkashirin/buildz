@@ -8,10 +8,12 @@ extern fn mul(a: i32, b: i32) i32;
 
 pub fn main() !void {
     // Check that external `add` works fine.
+    const stdout = std.io.getStdOut().writer();
+
     const a_term: i32 = 2;
     const the_term: i32 = 2;
     const sum = add(a_term, the_term);
-    std.debug.print(
+    try stdout.print(
         "The sum of {d} and {d} is {d}.\n",
         .{ a_term, the_term, sum },
     );
@@ -20,7 +22,7 @@ pub fn main() !void {
     const a_factor: i32 = 2;
     const the_factor: i32 = 2;
     const product = mul(a_factor, the_factor);
-    std.debug.print(
+    try stdout.print(
         "The product of {d} and {d} is {d}.\n",
         .{ a_term, the_term, product },
     );
