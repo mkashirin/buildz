@@ -7,9 +7,9 @@ extern fn add(a: i32, b: i32) i32;
 extern fn mul(a: i32, b: i32) i32;
 
 pub fn main() !void {
-    // Check that external `add` works fine.
     const stdout = std.io.getStdOut().writer();
 
+    // Check that external `add` works fine.
     const a_term: i32 = 2;
     const the_term: i32 = 2;
     const sum = add(a_term, the_term);
