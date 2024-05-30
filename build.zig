@@ -1,10 +1,12 @@
 const std = @import("std");
 
-pub fn build(b: *std.Build) !void {
+pub fn build(b: *std.Build) void {
     // Set the default options for the target and optimizations.
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // Libraries block
+    //
     // Add and install static library atrifact.
     const slib = b.addStaticLibrary(.{
         .name = "szlib",
@@ -25,27 +27,66 @@ pub fn build(b: *std.Build) !void {
     });
     b.installArtifact(dlib);
 
+    // Zig executable block
+    //
     // Add and install executable artifact.
-    const exe = b.addExecutable(.{
+    const buildz = b.addExecutable(.{
         .name = "buildz",
         .root_source_file = b.path("src/zig/main.zig"),
         .target = target,
         .optimize = optimize,
+        .version = .{ .major = 0, .minor = 1, .patch = 0 },
     });
     // Create an array of libs and link static library "szlib" and dynamic
     // library "dzlib" to executable "exe".
     const libs = [_]*std.Build.Step.Compile{ slib, dlib };
-    for (libs) |lib| exe.linkLibrary(lib);
-    b.installArtifact(exe);
+    for (libs) |lib| buildz.linkLibrary(lib);
+    b.installArtifact(buildz);
 
-    // Allow for additional command line args.
-    const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| run_cmd.addArgs(args);
+    // C executable block
+    //
+    // To compile a C file with Zig we first need to translate it to zig.
+    // The Zig C compiler does exactly this when `zig build-exe -lc` is called
+    // on whatever your C file name is. (Libc is linked by default.)
+    const translated = b.addTranslateC(.{
+        .root_source_file = b.path("src/c/hello.c"),
+        .target = target,
+        .optimize = optimize,
+    });
+    // But we can not install this as artifact straight up. The
+    // `std.Build.installArtifact()` accepts `*std.Build.Step.Compile` and we
+    // now can create one because `translated` is a reference to a Zig code!
+    // The only difference is that we do not have to specify the root source
+    // file.
+    const buildc = translated.addExecutable(.{
+        .name = "buildc",
+        .target = target,
+        .optimize = optimize,
+        .version = .{ .major = 0, .minor = 1, .patch = 0 },
+    });
+    // We then need to additionally link libc to the `std.Build.Step.Compile`.
+    buildc.linkLibC();
+    b.installArtifact(buildc);
 
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
+    // Command line block
+    //
+    // Provide the run step for each of the executables and allow for additional
+    // command line args to be passed to these executables.
+    const run_exes = [_]*std.Build.Step.Compile{ buildz, buildc };
+    const exe_names = [_][]const u8{ "buildz", "buildc" };
+    // Inline for because string concatenation must be evaluated at comp-time.
+    inline for (run_exes, exe_names) |run_exe, exe_name| {
+        const run_cmd = b.addRunArtifact(run_exe);
+        run_cmd.step.dependOn(b.getInstallStep());
+        if (b.args) |args| run_cmd.addArgs(args);
 
+        const step_description = "Run the " ++ exe_name ++ " executable";
+        const run_step = b.step(exe_name, step_description);
+        run_step.dependOn(&run_cmd.step);
+    }
+
+    // Unit tests block
+    //
     // Add unit tests for static library.
     const slib_unit_tests = b.addTest(.{
         .root_source_file = b.path("src/zig/static.zig"),
@@ -63,28 +104,22 @@ pub fn build(b: *std.Build) !void {
     const run_dlib_unit_tests = b.addRunArtifact(dlib_unit_tests);
 
     // Add unit tests for executable.
-    const exe_unit_tests = b.addTest(.{
+    const buildz_unit_tests = b.addTest(.{
         .root_source_file = b.path("src/zig/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
+    const run_buildz_unit_tests = b.addRunArtifact(buildz_unit_tests);
 
     const test_step = b.step("test", "Run unit tests");
     // Create an array of unit tests to loop over them.
     const run_unit_tests = [_]*std.Build.Step.Run{
         run_slib_unit_tests,
         run_dlib_unit_tests,
-        run_exe_unit_tests,
+        run_buildz_unit_tests,
     };
     // Loop over unit tests and run them.
-    const stdout = std.io.getStdErr().writer();
-    for (1.., run_unit_tests) |test_num, run_unit_test| {
-        const test_results = run_unit_test.step.test_results;
-        try stdout.print(
-            "Test step {d} succeded: {}\n",
-            .{ test_num, test_results.isSuccess() },
-        );
+    for (run_unit_tests) |run_unit_test| {
         test_step.dependOn(&run_unit_test.step);
     }
 }
